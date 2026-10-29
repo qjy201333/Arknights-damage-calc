@@ -234,6 +234,21 @@ async function main() {
     }
   }
 
+  const OFFENSE_ATTRIBUTES = new Set(["atk", "attackSpeed", "damageTaken", "damageReduction"])
+  const offenseRelicIds = new Set()
+  for (const rule of rules) {
+    const offense =
+      OFFENSE_ATTRIBUTES.has(rule.attribute) ||
+      (rule.target === "enemy" && rule.attribute === "def" && rule.value < 0)
+    if (offense) offenseRelicIds.add(rule.relicId)
+  }
+  const relicIdBefore = new Set(rules.map((rule) => rule.relicId)).size
+  const rulesBefore = rules.length
+  const kept = rules.filter((rule) => offenseRelicIds.has(rule.relicId))
+  rules.splice(0, rules.length, ...kept)
+  const removedRules = rulesBefore - rules.length
+  const removedRelics = relicIdBefore - offenseRelicIds.size
+
   const byAttribute = {}
   for (const rule of rules) {
     const key = `${rule.target}.${rule.attribute}${rule.damageType ? '.' + rule.damageType : ''}`
@@ -251,6 +266,9 @@ async function main() {
       relics: totalRelics,
       rules: rules.length,
       byAttribute,
+      removedRules,
+      removedRelics,
+      offenseRelics: offenseRelicIds.size,
     },
     rules,
   }
