@@ -35,7 +35,8 @@ export function normalizeTopicRules(rules) {
     damageType: rule.damageType ?? null,
     kind: rule.kind,
     value: rule.value,
-    conditional: false,
+    conditional: Boolean(rule.conditional),
+    conditionText: rule.conditionText ?? null,
     difficulty: null,
     professionFilter: rule.professionFilter ?? null,
     stacked: Boolean(rule.stacked),
@@ -162,7 +163,19 @@ export function evaluateDamage({ attack, multiplier, enemy, allyRules, damageTyp
   }
 
   const taken = damageTakenMultiplier(allyRules, damageType)
-  const finalDamage = rawDamage * taken.factor
+  const reductionRules = allyRules.filter(
+    (rule) => rule.target === "enemy" && rule.attribute === "damageReduction",
+  )
+  const reduction = reductionRules.reduce((sum, rule) => sum + rule.value, 0)
+  const afterReduction = rawDamage * (1 - reduction)
+  if (reductionRules.length > 0) {
+    steps.push({
+      label: "敌方减伤",
+      formula: round(rawDamage) + " × (1 − " + round(reduction) + ")",
+      value: afterReduction,
+    })
+  }
+  const finalDamage = afterReduction * taken.factor
   if (taken.count > 0) {
     steps.push({
       label: '伤害易伤',

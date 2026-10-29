@@ -24,6 +24,14 @@ function reset() {
   form.value = { ...defaults }
 }
 
+function applyBlueprint() {
+  form.value.enemyReductionBonus = 0.5
+}
+
+function clearBlueprint() {
+  form.value.enemyReductionBonus = 0
+}
+
 const round = (value) => Math.round(value * 100) / 100
 const pct = (value) => `${round(value * 100)}%`
 </script>
@@ -60,6 +68,10 @@ const pct = (value) => `${round(value * 100)}%`
 
       <details class="enemy-mods" open>
         <summary>敌方藏品修正（负面藏品）</summary>
+        <div class="presets">
+          <button @click="applyBlueprint">生命蓝图 · 精英/领袖登场 30 秒内（减伤 50%）</button>
+          <button v-if="form.enemyReductionBonus === 0.5" class="clear" @click="clearBlueprint">清除</button>
+        </div>
         <div class="grid">
           <label>加防固定值<input v-model.number="form.enemyDefBonus" type="number" /></label>
           <label>加防百分比<input v-model.number="form.enemyDefPct" type="number" step="0.01" /></label>
@@ -197,6 +209,29 @@ h3 {
   border-radius: 12px;
   border: 1px dashed rgba(244, 114, 182, 0.4);
   background: rgba(244, 114, 182, 0.05);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.presets button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 114, 182, 0.45);
+  background: rgba(244, 114, 182, 0.1);
+  color: #f9a8d4;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.presets button.clear {
+  border-color: rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: var(--muted);
 }
 
 .enemy-mods summary {
