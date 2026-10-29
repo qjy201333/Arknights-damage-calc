@@ -81,6 +81,7 @@ const IGNORED_BB_KEYS = new Set([
 ])
 
 const asArray = (value) => (Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [])
+const round6 = (value) => Math.round(value * 1e6) / 1e6
 
 function blackboardValue(blackboard, key) {
   return blackboard.find((entry) => entry.key === key)?.value
@@ -146,7 +147,7 @@ function buildRulesForRelic(topic, relic) {
         attribute: 'damageTaken',
         damageType: DAMAGE_SCALE_TYPE[scaleMatch[1]] ?? null,
         kind: 'finalMul',
-        value: scale - 1,
+        value: round6(scale - 1),
         stacked: buff.key !== 'global_buff_stack_base_one',
         source: 'excel',
         raw: `${keyValue} damage_scale=${scale}`,
@@ -154,11 +155,35 @@ function buildRulesForRelic(topic, relic) {
       return
     }
 
+    const resistance = blackboardValue(blackboard, 'damage_resistance')
+    if (typeof resistance === 'number') {
+      const hasDuration = typeof blackboardValue(blackboard, 'duration') === 'number'
+      const conditional = hasDuration || /enroll|difficulty/.test(keyValue)
+      rules.push({
+        id: `${relic.id}-${buffIndex}-resist`,
+        relicId: relic.id,
+        relicName: relic.name,
+        topic,
+        topicLabel: TOPIC_LABEL[topic] ?? topic,
+        target: 'enemy',
+        attribute: 'damageReduction',
+        kind: 'add',
+        value: resistance,
+        stacked: false,
+        conditional,
+        conditionText: conditional ? `${keyValue}${hasDuration ? ` ${blackboardValue(blackboard, 'duration')}s` : ''}` : null,
+        source: 'excel',
+        raw: `${keyValue} damage_resistance=${resistance}`,
+      })
+      return
+    }
+
     const downAttr = ENEMY_DOWN_ATTR[keyValue]
     if (downAttr) {
       const attrKey = Object.entries(ATTR_MAP).find(([, value]) => value === downAttr)?.[0]
-      const value = attrKey ? blackboardValue(blackboard, attrKey) : undefined
-      if (typeof value !== 'number') return
+      const rawValue = attrKey ? blackboardValue(blackboard, attrKey) : undefined
+      if (typeof rawValue !== 'number') return
+      const value = Math.abs(rawValue) >= 1 ? rawValue - 1 : rawValue
       rules.push({
         id: `${relic.id}-${buffIndex}-down`,
         relicId: relic.id,
@@ -167,14 +192,16 @@ function buildRulesForRelic(topic, relic) {
         topicLabel: TOPIC_LABEL[topic] ?? topic,
         target: 'enemy',
         attribute: downAttr,
-        kind: Math.abs(value) <= 1 ? 'mul' : 'add',
-        value,
+        kind: 'mul',
+        value: round6(value),
         stacked: buff.key !== 'global_buff_stack_base_one',
         source: 'excel',
         raw: `${keyValue} ${downAttr}=${value}`,
       })
     }
   })
+
+  for (const rule of rules) rule.usage = relic.usage ?? null
 
   return rules
 }
@@ -187,10 +214,18 @@ async function main() {
 
   for (const [topic, data] of Object.entries(table.details ?? {})) {
     const relics = data.relics ?? {}
+    const items = data.items ?? {}
     relicCount[topic] = Object.keys(relics).length
     for (const relic of Object.values(relics)) {
       totalRelics += 1
-      rules.push(...buildRulesForRelic(topic, relic))
+      const item = items[relic.id]
+      rules.push(
+        ...buildRulesForRelic(topic, {
+          ...relic,
+          name: item?.name ?? relic.id,
+          usage: item?.usage ?? null,
+        }),
+      )
     }
   }
 

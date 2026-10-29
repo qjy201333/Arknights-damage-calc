@@ -9,6 +9,9 @@ export function computeManualDamage(input) {
     def = 0,
     defCut = 0,
     dmgReduction = 0,
+    enemyDefBonus = 0,
+    enemyDefPct = 0,
+    enemyReductionBonus = 0,
   } = input
 
   const steps = []
@@ -40,11 +43,12 @@ export function computeManualDamage(input) {
   steps.push({ label: '攻击力倍率', formula: `${round(beforeScale)} × ${atkScale}`, value })
 
   const scaled = value
-  const effectiveDef = def * (1 - defCut)
+  const baseDef = def + enemyDefBonus
+  const effectiveDef = baseDef * (1 + enemyDefPct) * (1 - defCut)
   value = value - effectiveDef
   steps.push({
     label: '减防',
-    formula: `${round(scaled)} − ${round(def)} × (1 − ${defCut}) = ${round(scaled)} − ${round(effectiveDef)}`,
+    formula: `${round(scaled)} − ${round(baseDef)} × (1 ${enemyDefPct >= 0 ? '+' : '−'} ${round(Math.abs(enemyDefPct))}) × (1 − ${defCut}) = ${round(scaled)} − ${round(effectiveDef)}`,
     value,
   })
 
@@ -53,10 +57,11 @@ export function computeManualDamage(input) {
   steps.push({ label: '最终乘算（伤害倍率）', formula: `${round(beforeDmg)} × ${dmgScale}`, value })
 
   const beforeReduction = value
-  value = value * (1 - dmgReduction)
+  const totalReduction = dmgReduction + enemyReductionBonus
+  value = value * (1 - totalReduction)
   steps.push({
     label: '减伤',
-    formula: `${round(beforeReduction)} × (1 − ${dmgReduction})`,
+    formula: `${round(beforeReduction)} × (1 − ${round(totalReduction)})`,
     value,
   })
 

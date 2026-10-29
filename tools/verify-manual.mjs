@@ -44,3 +44,18 @@ console.log(`差异原因: PRTS 的 D_p 是加项(+1.04)，而表格口径是倍
 
 const baseline = JSON.parse(await readFile(new URL('../src/data/topicRules.json', import.meta.url), 'utf8'))
 console.log(`\n规则库基准: ${baseline.stats.rules} 条 / ${baseline.stats.relics} 个藏品条目`)
+const withNegativeRelic = computeManualDamage({
+  ...fixture,
+  enemyDefBonus: 300,
+  enemyDefPct: 0.2,
+  enemyReductionBonus: 0.05,
+})
+console.log('\n=== 敌方负面藏品修正用例 ===')
+console.log('加防固定 300、加防 20%、追加减伤 5%')
+console.log(`减防步骤: ${withNegativeRelic.steps.find((step) => step.label === '减防')?.formula}`)
+console.log(`单次伤害: ${withNegativeRelic.finalDamage.toFixed(2)}（未加修正 ${result.finalDamage.toFixed(2)}）`)
+assert.ok(
+  withNegativeRelic.finalDamage < result.finalDamage,
+  '敌方加防与加减伤应使伤害下降',
+)
+console.log('✅ 敌方负面藏品修正生效')

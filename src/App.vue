@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import DamageCalculator from './views/DamageCalculator.vue'
+import CustomCalculator from './views/CustomCalculator.vue'
 import RelicBrowser from './views/RelicBrowser.vue'
 
 const tab = ref('calc')
@@ -15,12 +16,14 @@ const tab = ref('calc')
       </div>
       <nav class="tabs">
         <button :class="{ active: tab === 'calc' }" @click="tab = 'calc'">伤害计算</button>
+        <button :class="{ active: tab === 'custom' }" @click="tab = 'custom'">自定义</button>
         <button :class="{ active: tab === 'relics' }" @click="tab = 'relics'">藏品库</button>
       </nav>
-      <span class="version">v0.2</span>
+      <span class="version">v0.3</span>
     </header>
 
     <DamageCalculator v-if="tab === 'calc'" />
+    <CustomCalculator v-else-if="tab === 'custom'" />
     <RelicBrowser v-else />
   </div>
 </template>
