@@ -14,7 +14,8 @@
     "pack": "npm run build && electron-builder --win --dir",
     "dist": "npm run build && electron-builder --win",
     "fetch:prts": "node tools/fetch-prts.mjs",
-    "parse:prts": "node tools/parse-prts.mjs"
+    "parse:prts": "node tools/parse-prts.mjs",
+    "build:gamedata": "node tools/build-gamedata.mjs"
   },
   "dependencies": {
     "vue": "^3.5.13"
