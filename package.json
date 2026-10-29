@@ -17,7 +17,8 @@
     "parse:prts": "node tools/parse-prts.mjs",
     "build:gamedata": "node tools/build-gamedata.mjs",
     "build:rules": "node tools/build-rules.mjs",
-    "build:topic-rules": "node tools/build-topic-rules.mjs"
+    "build:topic-rules": "node tools/build-topic-rules.mjs",
+    "selftest": "node tools/selftest.mjs"
   },
   "dependencies": {
     "vue": "^3.5.13"
@@ -38,7 +39,8 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,

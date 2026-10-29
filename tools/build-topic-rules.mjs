@@ -156,7 +156,11 @@ function buildRulesForRelic(topic, relic) {
     }
 
     const resistance = blackboardValue(blackboard, 'damage_resistance')
-    if (typeof resistance === 'number') {
+    const usageText = relic.usage || ""
+    const enemyTakenOnly =
+      /^enemy_damage_resistance/.test(keyValue) ||
+      /(敌人|敌方|敌军)[^，。；]*受到[^，。；]*伤害/.test(usageText)
+    if (typeof resistance === 'number' && enemyTakenOnly) {
       const hasDuration = typeof blackboardValue(blackboard, 'duration') === 'number'
       const conditional = hasDuration || /enroll|difficulty/.test(keyValue)
       rules.push({
@@ -183,7 +187,8 @@ function buildRulesForRelic(topic, relic) {
       const attrKey = Object.entries(ATTR_MAP).find(([, value]) => value === downAttr)?.[0]
       const rawValue = attrKey ? blackboardValue(blackboard, attrKey) : undefined
       if (typeof rawValue !== 'number') return
-      const value = Math.abs(rawValue) >= 1 ? rawValue - 1 : rawValue
+      const absoluteAttribute = downAttr === "attackSpeed"
+      const value = absoluteAttribute ? rawValue : Math.abs(rawValue) >= 1 ? rawValue - 1 : rawValue
       rules.push({
         id: `${relic.id}-${buffIndex}-down`,
         relicId: relic.id,
@@ -192,7 +197,7 @@ function buildRulesForRelic(topic, relic) {
         topicLabel: TOPIC_LABEL[topic] ?? topic,
         target: 'enemy',
         attribute: downAttr,
-        kind: 'mul',
+        kind: absoluteAttribute ? 'add' : 'mul',
         value: round6(value),
         stacked: buff.key !== 'global_buff_stack_base_one',
         source: 'excel',

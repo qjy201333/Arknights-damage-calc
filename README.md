@@ -1,6 +1,6 @@
 # 明日方舟集成战略伤害计算器
 
-桌面端（Electron + Vue 3 + Vite）的明日方舟集成战略伤害计算工具。当前为 `v0.2` 预览版，已完成藏品算法数据管道、六星干员面板与单次伤害计算。
+桌面端（Electron + Vue 3 + Vite）的明日方舟集成战略伤害计算工具。当前为 `v0.3` 预览版，已完成藏品算法数据管道、六星干员面板与单次伤害计算。
 
 ## 功能进度
 
@@ -24,6 +24,7 @@ npm run dev          # 浏览器预览
 npm run electron:dev # Electron 窗口（需先 npm run dev）
 npm run build        # 构建前端
 npm run dist         # 打包 Windows 安装包
+npm run selftest     # 回归基准 + 数据完整性自测
 ```
 
 ## 数据管道
