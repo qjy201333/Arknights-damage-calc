@@ -9,7 +9,8 @@ import {
   extractSkillMultiplier,
   ATTR_LABEL,
 } from '../engine/operator.js'
-import { physicalDamage, artsDamage } from '../engine/damage.js'
+import topicRuleData from '../data/topicRules.json'
+import { usableRelics, ruleTopics, resolveRules, evaluateDamage, normalizeTopicRules } from '../engine/rules.js'
 
 const operators = operatorsData.operators
 const allSkills = skillsData.skills
@@ -40,6 +41,11 @@ const skillLevel = ref(10)
 const defense = ref(500)
 const res = ref(20)
 const damageType = ref('arts')
+
+const allRules = normalizeTopicRules(topicRuleData.rules)
+const calcTopic = ref('沉沦者的黑流树海')
+const pickedRelics = ref([])
+const relicKeyword = ref('')
 
 const filtered = computed(() => {
   const word = keyword.value.trim().toLowerCase()
@@ -84,11 +90,38 @@ const multiplier = computed(() =>
 )
 
 const atkValue = computed(() => panel.value?.attributes.atk ?? 0)
-const physResult = computed(() => physicalDamage(atkValue.value, multiplier.value.value, defense.value))
-const artsResult = computed(() => artsDamage(atkValue.value, multiplier.value.value, res.value / 100))
-const finalDamage = computed(() =>
-  damageType.value === 'physical' ? physResult.value : artsResult.value,
+
+const relicTopics = computed(() => ruleTopics(allRules.filter((rule) => !rule.conditional)))
+const availableRelics = computed(() => usableRelics(allRules, calcTopic.value))
+const filteredRelics = computed(() => {
+  const word = relicKeyword.value.trim()
+  if (!word) return availableRelics.value
+  return availableRelics.value.filter((relic) => relic.name.includes(word))
+})
+
+const resolvedRules = computed(() =>
+  resolveRules(allRules, {
+    topic: calcTopic.value,
+
+    relicKeys: pickedRelics.value,
+  }),
 )
+
+const damageResult = computed(() =>
+  evaluateDamage({
+    attack: atkValue.value,
+    multiplier: multiplier.value.value,
+    enemy: { def: defense.value, res: res.value / 100 },
+    allyRules: resolvedRules.value,
+    damageType: damageType.value,
+  }),
+)
+
+function toggleRelic(key) {
+  pickedRelics.value = pickedRelics.value.includes(key)
+    ? pickedRelics.value.filter((item) => item !== key)
+    : [...pickedRelics.value, key]
+}
 
 const talentList = computed(() => {
   if (!selected.value) return []
@@ -232,7 +265,30 @@ const displayAttr = (key) => {
 
     <aside class="panel result-panel">
       <h3>伤害计算</h3>
-      <p class="hint">面板 + 技能倍率 + 敌人减免</p>
+      <p class="hint">面板 + 技能倍率 + 藏品加成 + 敌人减免</p>
+
+      <details class="relic-config">
+        <summary>藏品加成（已选 {{ pickedRelics.length }}）</summary>
+        <div class="relic-controls">
+          <select v-model="calcTopic" @change="pickedRelics = []">
+            <option v-for="item in relicTopics" :key="item" :value="item">{{ item }}</option>
+          </select>
+
+        </div>
+        <input v-model="relicKeyword" class="relic-search" placeholder="搜索藏品" />
+        <div class="relic-picker">
+          <label v-for="relic in filteredRelics" :key="relic.key">
+            <input
+              type="checkbox"
+              :checked="pickedRelics.includes(relic.key)"
+              @change="toggleRelic(relic.key)"
+            />
+            <span>{{ relic.name }}</span>
+            <em>{{ relic.attributes.join(' / ') }}</em>
+          </label>
+        </div>
+        <p v-if="!filteredRelics.length" class="hint">该主题暂无可计算藏品</p>
+      </details>
 
       <div class="seg full">
         <button :class="{ active: damageType === 'physical' }" @click="damageType = 'physical'">物理</button>
@@ -246,29 +302,45 @@ const displayAttr = (key) => {
       </div>
 
       <div class="result-block">
-        <div class="result-row primary">
-          <span>最终攻击力</span>
+        <div class="result-row">
+          <span>面板攻击力</span>
           <b>{{ round(atkValue) }}</b>
+        </div>
+        <div class="result-row primary">
+          <span>加成后攻击力</span>
+          <b>{{ round(damageResult.finalAtk) }}</b>
         </div>
         <div class="result-row">
           <span>技能倍率</span>
           <b>{{ multiplier.value }}</b>
         </div>
         <div class="result-row">
+          <span>敌人防御 / 法抗</span>
+          <b>{{ round(damageResult.enemy.def) }} / {{ round(damageResult.enemy.res * 100) }}%</b>
+        </div>
+        <div class="result-row">
+          <span>易伤倍率</span>
+          <b>{{ round(damageResult.taken.factor) }}</b>
+        </div>
+        <div class="result-row">
           <span>{{ damageType === 'physical' ? '物理伤害' : '法术伤害' }}</span>
-          <b :class="damageType === 'physical' ? 'phys' : 'arts'">{{ round(finalDamage.value) }}</b>
+          <b :class="damageType === 'physical' ? 'phys' : 'arts'">{{ round(damageResult.finalDamage) }}</b>
         </div>
       </div>
 
       <details open>
         <summary>计算明细</summary>
-        <p v-for="step in finalDamage.steps" :key="step.label" class="step">
+        <p v-for="step in damageResult.allySteps" :key="step.attribute" class="step">
+          <span>攻击力加成：{{ step.sources.join('，') }}</span>
+          <code>{{ round(step.base) }} → {{ round(step.value) }}</code>
+        </p>
+        <p v-for="step in damageResult.steps" :key="step.label" class="step">
           <span>{{ step.label }}</span>
           <code>{{ step.formula }} = {{ round(step.value) }}</code>
         </p>
       </details>
 
-      <p class="footnote">天赋与藏品的数值化效果尚未接入，当前仅计算面板 × 技能倍率</p>
+      <p class="footnote">天赋尚未数值化；藏品只接入 PRTS 已标注运算与伤害易伤的可计算条目</p>
     </aside>
   </div>
 </template>
@@ -606,6 +678,82 @@ h3 {
   font-size: 13px;
   outline: none;
   text-align: right;
+}
+
+.relic-config {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(8, 12, 20, 0.4);
+}
+
+.relic-config summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--cyan);
+}
+
+.relic-controls {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.relic-controls select,
+.relic-search {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(8, 12, 20, 0.7);
+  font-size: 12px;
+  outline: none;
+  min-width: 0;
+}
+
+.relic-search {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.relic-picker {
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.relic-picker label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.relic-picker label:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.relic-picker input {
+  accent-color: #22d3ee;
+}
+
+.relic-picker span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relic-picker em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--muted);
 }
 
 .result-block {

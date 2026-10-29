@@ -11,7 +11,9 @@
 - [x] 六星干员数据裁剪（147 名六星、432 个技能、1794 个敌人图鉴）
 - [x] 面板计算内核（精英化 / 等级线性插值 / 潜能 / 信赖）
 - [x] 干员 × 技能 × 敌人减免的单次伤害计算界面
-- [ ] 天赋数值化与藏品规则库求值器
+- [x] 藏品规则库：excel 原生 buff 1036 条（属性加成、敌方易伤、减防）
+- [x] 藏品规则库：PRTS 文本推断 589 条（含 208 条无条件属性规则）
+- [ ] 天赋数值化
 - [ ] 完整明细树与 exe 打包
 
 ## 开发
@@ -30,6 +32,8 @@ npm run dist         # 打包 Windows 安装包
 npm run fetch:prts   # 从 PRTS 抓取 分类:收藏品 全部页面
 npm run parse:prts   # 解析为 data/relics.json
 npm run build:gamedata # 裁剪六星干员 / 技能 / 敌人图鉴到 src/data
+npm run build:rules     # PRTS 文本 → 藏品规则（补充）
+npm run build:topic-rules # excel roguelike_topic_table → 藏品原生规则（主）
 ```
 
 数据来源：PRTS（https://prts.wiki/），授权协议 CC BY-NC-SA 4.0，仅用于非商业用途。藏品数值的权威来源为游戏 excel 表，PRTS 提供运算语义与公式定义。
