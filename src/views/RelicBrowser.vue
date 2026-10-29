@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import dataset from '../../data/relics.json'
+import dataset from '../data/offenseRelics.json'
 import { computeAttribute, physicalDamage, artsDamage } from '../engine/damage.js'
 
 const relics = dataset.relics
