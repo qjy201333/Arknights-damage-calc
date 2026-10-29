@@ -1,0 +1,7 @@
+node_modules/
+dist/
+release/
+*.log
+
+# PRTS 原始 wikitext 可通过 npm run fetch:prts 重建，不纳入版本库
+data/raw/

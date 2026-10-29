@@ -1,0 +1,55 @@
+:root {
+  --bg: #080b12;
+  --bg-soft: #101725;
+  --panel: rgba(20, 28, 44, 0.72);
+  --line: rgba(96, 165, 250, 0.16);
+  --text: #dbe7f5;
+  --muted: #7c8ba3;
+  --cyan: #22d3ee;
+  --violet: #a855f7;
+  --pink: #f472b6;
+  --amber: #fbbf24;
+  --green: #34d399;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background:
+    radial-gradient(900px 500px at 12% -10%, rgba(168, 85, 247, 0.18), transparent 65%),
+    radial-gradient(800px 480px at 88% 0%, rgba(34, 211, 238, 0.16), transparent 62%),
+    var(--bg);
+  color: var(--text);
+  font-family: 'Inter', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(96, 165, 250, 0.25);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

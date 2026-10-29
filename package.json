@@ -1,0 +1,45 @@
+{
+  "name": "arknights-damage-calc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "明日方舟集成战略伤害计算器",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron": "electron electron/main.cjs",
+    "electron:dev": "electron electron/main.cjs --dev",
+    "pack": "npm run build && electron-builder --win --dir",
+    "dist": "npm run build && electron-builder --win",
+    "fetch:prts": "node tools/fetch-prts.mjs",
+    "parse:prts": "node tools/parse-prts.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "vite": "^6.0.7"
+  },
+  "build": {
+    "appId": "com.qjy.arknights.damagecalc",
+    "productName": "ArknightsDamageCalc",
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
