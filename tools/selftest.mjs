@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { computeOperatorPanel } from '../src/engine/operator.js'
 import { evaluateDamage, normalizeTopicRules, resolveRules } from '../src/engine/rules.js'
 import { computeManualDamage } from '../src/engine/manual.js'
-import { computeDpsMetrics } from '../src/engine/dps.js'
+import { computeDpsMetrics, computeSkillCycleDps } from '../src/engine/dps.js'
 
 const read = async (path) => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'))
 
@@ -86,6 +86,37 @@ check('DPS 与自定义伤害联动：17333.17 ÷ 2.9', () => {
   })
   const m = computeDpsMetrics({ baseAttackTime: 2.9, attackSpeed: 100, damagePerHit: r.finalDamage })
   return `dps=${near(Number(m.dps.toFixed(2)), Number((17333.17 / 2.9).toFixed(2)), 0.02)}`
+})
+
+check('技能循环 DPS：输出100/50、持续20s、SP30 → 70', () => {
+  const c = computeSkillCycleDps({
+    activeDps: 100,
+    normalDps: 50,
+    duration: 20,
+    spCost: 30,
+    initSp: 0,
+    spRecovery: 1,
+  })
+  near(c.chargeTime, 30)
+  near(c.cycle, 50)
+  near(c.averageDps, 70)
+  near(c.uptime, 0.4)
+  return `充能=${c.chargeTime}s 循环=${c.cycle}s 平均=${c.averageDps}`
+})
+
+check('技能循环：初始SP满时无充能空窗', () => {
+  const c = computeSkillCycleDps({
+    activeDps: 200,
+    normalDps: 50,
+    duration: 10,
+    spCost: 30,
+    initSp: 30,
+    spRecovery: 1,
+  })
+  near(c.chargeTime, 0)
+  near(c.cycle, 10)
+  near(c.averageDps, 200)
+  return `平均=${c.averageDps} 覆盖率=100%`
 })
 
 check('生命蓝图 条件减伤默认不生效', () => {

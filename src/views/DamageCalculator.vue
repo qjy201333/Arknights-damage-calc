@@ -18,7 +18,7 @@ import {
   normalizeTopicRules,
   computedAllyAttributes,
 } from '../engine/rules.js'
-import { computeDpsMetrics } from '../engine/dps.js'
+import { computeDpsMetrics, computeSkillCycleDps } from '../engine/dps.js'
 
 const operators = operatorsData.operators
 const allSkills = skillsData.skills
@@ -140,6 +140,29 @@ const speedMetrics = computed(() => {
     damagePerHit: damageResult.value.finalDamage,
   })
 })
+
+const normalDamageResult = computed(() =>
+  evaluateDamage({
+    attack: atkValue.value,
+    multiplier: 1,
+    enemy: { def: defense.value, res: res.value / 100 },
+    allyRules: resolvedRules.value,
+    damageType: damageType.value,
+  }),
+)
+
+const cycleMetrics = computed(() =>
+  computeSkillCycleDps({
+    activeDps: speedMetrics.value.dps,
+    normalDps: speedMetrics.value.interval > 0
+      ? normalDamageResult.value.finalDamage / speedMetrics.value.interval
+      : 0,
+    duration: currentSkillLevel.value?.duration ?? 0,
+    spCost: currentSkillLevel.value?.spData?.spCost ?? 0,
+    initSp: currentSkillLevel.value?.spData?.initSp ?? 0,
+    spRecovery: 1,
+  }),
+)
 
 function toggleRelic(key) {
   pickedRelics.value = pickedRelics.value.includes(key)
@@ -357,6 +380,10 @@ const displayAttr = (key) => {
         <div class="result-row">
           <span>DPS（每秒伤害）</span>
           <b class="dps">{{ round(speedMetrics.dps) }}</b>
+        </div>
+        <div v-if="currentSkillLevel && currentSkillLevel.duration > 0" class="result-row">
+          <span>循环平均 DPS（覆盖率 {{ Math.round(cycleMetrics.uptime * 100) }}%）</span>
+          <b class="dps">{{ round(cycleMetrics.averageDps) }}</b>
         </div>
       </div>
 

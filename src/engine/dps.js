@@ -28,25 +28,43 @@ export function computeDpsMetrics({ baseAttackTime, attackSpeed, damagePerHit })
   return { interval, dps, attackSpeed, baseAttackTime, damagePerHit, steps }
 }
 
-export function computeSkillCycleDps({ damagePerHit, interval, duration, spCost, initSp = 0 }) {
-  const activeDps = computeDps(damagePerHit, interval)
-  const cycle = (spCost ?? 0) + (duration ?? 0)
-  if (cycle <= 0) return { activeDps, averageDps: activeDps, cycle, uptime: 1 }
-  const averageDps = initSp >= spCost ? activeDps * (duration / cycle) : activeDps * ((duration - 0) / cycle)
-  return {
-    activeDps,
-    averageDps,
-    cycle,
-    uptime: duration / cycle,
-    steps: [
-      { label: '技能期间 DPS', formula: `${round(damagePerHit)} ÷ ${round(interval)}`, value: activeDps },
-      {
-        label: '循环平均 DPS',
-        formula: `${round(activeDps)} × ${round(duration)} ÷ (${round(spCost)} + ${round(duration)})`,
-        value: averageDps,
-      },
-    ],
+export function computeSkillCycleDps({
+  activeDps = 0,
+  normalDps = 0,
+  duration = 0,
+  spCost = 0,
+  initSp = 0,
+  spRecovery = 1,
+}) {
+  const safeRecovery = spRecovery > 0 ? spRecovery : 1
+  const safeDuration = duration > 0 ? duration : 0
+  const chargeTime = Math.max(0, (spCost - initSp) / safeRecovery)
+  const cycle = chargeTime + safeDuration
+  if (cycle <= 0) {
+    return { activeDps, normalDps, chargeTime: 0, cycle: 0, uptime: 1, averageDps: activeDps, steps: [] }
   }
+  const activeDamage = activeDps * safeDuration
+  const normalDamage = normalDps * chargeTime
+  const averageDps = (activeDamage + normalDamage) / cycle
+  const uptime = safeDuration / cycle
+  const steps = [
+    {
+      label: '充能时间',
+      formula: `(${round(spCost)} − ${round(initSp)}) ÷ ${round(safeRecovery)}`,
+      value: chargeTime,
+    },
+    {
+      label: '技能期间 DPS',
+      formula: `${round(activeDps)}`,
+      value: activeDps,
+    },
+    {
+      label: '循环平均 DPS',
+      formula: `(${round(activeDps)} × ${round(safeDuration)} + ${round(normalDps)} × ${round(chargeTime)}) ÷ ${round(cycle)}`,
+      value: averageDps,
+    },
+  ]
+  return { activeDps, normalDps, chargeTime, cycle, uptime, averageDps, steps }
 }
 
 function round(value) {
