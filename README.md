@@ -37,6 +37,7 @@ npm run build:rules     # PRTS 文本 → 藏品规则（补充）
 npm run build:topic-rules # excel roguelike_topic_table → 藏品原生规则（主）
 npm run build:relics    # 藏品库过滤为仅输出相关
 npm run check:sources   # 与 Kengxxiao 数据源交叉验证
+npm run build:enemies  # 各主题敌人名单（BOSS/ELITE 置顶）
 ```
 
 数据来源：PRTS（https://prts.wiki/），授权协议 CC BY-NC-SA 4.0，仅用于非商业用途。藏品数值的权威来源为游戏 excel 表，PRTS 提供运算语义与公式定义。

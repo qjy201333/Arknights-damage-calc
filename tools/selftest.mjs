@@ -127,6 +127,9 @@ check('生命蓝图 条件减伤默认不生效', () => {
   return `default=${withRelic.finalDamage.toFixed(2)}`
 })
 
+const topicEnemiesData = await read('../src/data/topicEnemies.json')
+const await_read_topicEnemies = () => topicEnemiesData
+
 check('条件开关显式启用后生效', () => {
   const key = 'rogue_6_relic_final_10'
   const off = resolveRules(normalized, { topic: '沉沦者的黑流树海', relicKeys: [key] })
@@ -136,6 +139,36 @@ check('条件开关显式启用后生效', () => {
   const d1 = evaluateDamage({ attack: 1015, multiplier: 1.4, enemy: { def: 500, res: 0.2 }, allyRules: off, damageType: 'arts' })
   const d2 = evaluateDamage({ attack: 1015, multiplier: 1.4, enemy: { def: 500, res: 0.2 }, allyRules: on, damageType: 'arts' })
   return `${d1.finalDamage.toFixed(2)} → ${d2.finalDamage.toFixed(2)}`
+})
+
+check('主题敌人名单：六个主题齐全且 BOSS 置顶', () => {
+  const data = await_read_topicEnemies()
+  const keys = Object.keys(data.topics)
+  if (keys.length !== 6) throw new Error(`主题数 ${keys.length}`)
+  let bossTotal = 0
+  for (const key of keys) {
+    const topic = data.topics[key]
+    if (!topic.enemies.length) throw new Error(`${topic.topic} 敌人为空`)
+    const levels = topic.enemies.map((e) => e.level)
+    const firstNormal = levels.indexOf('NORMAL')
+    const lastSpecial = Math.max(levels.lastIndexOf('BOSS'), levels.lastIndexOf('ELITE'))
+    if (firstNormal !== -1 && lastSpecial > firstNormal) throw new Error(`${topic.topic} 排序错误：普通敌人先于精英/领袖`)
+    bossTotal += topic.counts.BOSS
+  }
+  if (bossTotal < 100) throw new Error(`BOSS 总数异常 ${bossTotal}`)
+  return `6 主题 / BOSS ${bossTotal}`
+})
+
+check('首领关敌人标记有效', () => {
+  const data = await_read_topicEnemies()
+  const t6 = data.topics.rogue_6
+  const bossStage = t6.enemies.filter((e) => e.inBossStage)
+  if (!bossStage.length) throw new Error('黑流树海无首领关敌人')
+  const names = bossStage.filter((e) => e.level === 'BOSS').map((e) => e.name)
+  if (!names.some((n) => n.includes('汉科') || n.includes('沉沦之人') || n.includes('物欲拮抗者'))) {
+    throw new Error(`首领关 BOSS 名单可疑: ${names.slice(0, 5).join('、')}`)
+  }
+  return `首领关敌人 ${bossStage.length} 个`
 })
 
 check('敌方减伤接入 0.5 → 减半', () => {

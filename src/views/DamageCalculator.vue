@@ -19,9 +19,20 @@ import {
   computedAllyAttributes,
 } from '../engine/rules.js'
 import { computeDpsMetrics, computeSkillCycleDps } from '../engine/dps.js'
+import topicEnemiesData from '../data/topicEnemies.json'
 
 const operators = operatorsData.operators
 const allSkills = skillsData.skills
+const topicEnemies = topicEnemiesData.topics
+
+const TOPIC_KEY_BY_LABEL = {
+  傀影与猩红孤钻: 'rogue_1',
+  水月与深蓝之树: 'rogue_2',
+  探索者的银凇止境: 'rogue_3',
+  萨卡兹的无终奇语: 'rogue_4',
+  岁的界园志异: 'rogue_5',
+  沉沦者的黑流树海: 'rogue_6',
+}
 
 const PROFESSION_LABEL = {
   PIONEER: '先锋',
@@ -56,6 +67,10 @@ const pickedRelics = ref([])
 const relicStacks = ref({})
 const conditionalOn = ref([])
 const relicKeyword = ref('')
+
+const enemyKeyword = ref('')
+const enemyBossOnly = ref(true)
+const selectedEnemy = ref(null)
 
 const filtered = computed(() => {
   const word = keyword.value.trim().toLowerCase()
@@ -107,6 +122,27 @@ const filteredRelics = computed(() => {
   const word = relicKeyword.value.trim()
   if (!word) return availableRelics.value
   return availableRelics.value.filter((relic) => relic.name.includes(word))
+})
+
+const enemyList = computed(() => {
+  const key = TOPIC_KEY_BY_LABEL[calcTopic.value]
+  const topic = key ? topicEnemies[key] : null
+  if (!topic) return []
+  return topic.enemies
+})
+
+const filteredEnemies = computed(() => {
+  const word = enemyKeyword.value.trim()
+  let list = enemyList.value
+  if (enemyBossOnly.value) list = list.filter((enemy) => enemy.level !== 'NORMAL')
+  if (word) list = list.filter((enemy) => enemy.name.includes(word))
+  return list
+})
+
+const selectedEnemyMeta = computed(() => {
+  if (!selectedEnemy.value) return null
+  const found = enemyList.value.find((enemy) => enemy.id === selectedEnemy.value)
+  return found ?? null
 })
 
 const resolvedRules = computed(() =>
@@ -191,6 +227,7 @@ function onTopicChange() {
   pickedRelics.value = []
   relicStacks.value = {}
   conditionalOn.value = []
+  selectedEnemy.value = null
 }
 
 const talentList = computed(() => {
@@ -384,6 +421,39 @@ const displayAttr = (key) => {
         <button :class="{ active: damageType === 'physical' }" @click="damageType = 'physical'">物理</button>
         <button :class="{ active: damageType === 'arts' }" @click="damageType = 'arts'">法术</button>
       </div>
+
+      <details class="enemy-config" open>
+        <summary>
+          敌人选择{{ selectedEnemyMeta ? `：${selectedEnemyMeta.name}` : '' }}
+        </summary>
+        <div class="enemy-toolbar">
+          <input v-model="enemyKeyword" class="enemy-search" placeholder="搜索敌人名称" />
+          <label class="boss-toggle">
+            <input v-model="enemyBossOnly" type="checkbox" />
+            <span>仅精英/领袖（{{ enemyList.filter((e) => e.level !== 'NORMAL').length }}）</span>
+          </label>
+        </div>
+        <div class="enemy-picker">
+          <button
+            v-for="enemy in filteredEnemies"
+            :key="enemy.id"
+            :class="{
+              active: selectedEnemy === enemy.id,
+              boss: enemy.level === 'BOSS',
+              elite: enemy.level === 'ELITE',
+            }"
+            @click="selectedEnemy = selectedEnemy === enemy.id ? null : enemy.id"
+          >
+            <span class="enemy-name">{{ enemy.name }}</span>
+            <em v-if="enemy.level === 'BOSS'">领袖</em>
+            <em v-else-if="enemy.level === 'ELITE'">精英</em>
+          </button>
+        </div>
+        <p v-if="!filteredEnemies.length" class="hint">无匹配敌人</p>
+        <p v-if="selectedEnemyMeta" class="hint">
+          {{ selectedEnemyMeta.level === 'BOSS' ? '领袖' : selectedEnemyMeta.level === 'ELITE' ? '精英' : '普通' }}敌人{{ selectedEnemyMeta.inBossStage ? '（首领关卡出现）' : '' }}，防御与法抗请在下方手动填入
+        </p>
+      </details>
 
       <div class="calc-grid">
         <label>技能等级 1–10<input v-model.number="skillLevel" type="number" :min="1" :max="10" /></label>
@@ -794,6 +864,108 @@ h3 {
   cursor: pointer;
   font-size: 12px;
   color: var(--cyan);
+}
+
+.enemy-config {
+  margin-bottom: 12px;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(8, 12, 20, 0.4);
+}
+
+.enemy-config summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #fbbf24;
+}
+
+.enemy-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.enemy-search {
+  flex: 1;
+  min-width: 120px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(8, 12, 20, 0.7);
+  font-size: 12px;
+  outline: none;
+}
+
+.boss-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.boss-toggle input {
+  accent-color: #fbbf24;
+}
+
+.enemy-picker {
+  max-height: 150px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.enemy-picker button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(8, 12, 20, 0.6);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.enemy-picker button.boss {
+  border-color: rgba(251, 191, 36, 0.55);
+  color: #fbbf24;
+}
+
+.enemy-picker button.elite {
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #c4b5fd;
+}
+
+.enemy-picker button:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.enemy-picker button.active {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.3), rgba(244, 114, 182, 0.3));
+  border-color: rgba(251, 191, 36, 0.8);
+  color: #fff;
+}
+
+.enemy-picker .enemy-name {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.enemy-picker em {
+  font-style: normal;
+  font-size: 9px;
+  opacity: 0.75;
 }
 
 .relic-controls {
