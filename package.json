@@ -19,7 +19,8 @@
     "build:rules": "node tools/build-rules.mjs",
     "build:topic-rules": "node tools/build-topic-rules.mjs",
     "selftest": "node tools/selftest.mjs",
-    "build:relics": "node tools/mark-relics.mjs"
+    "build:relics": "node tools/mark-relics.mjs",
+    "check:sources": "node --max-old-space-size=4096 tools/crosscheck-sources.mjs"
   },
   "dependencies": {
     "vue": "^3.5.13"
