@@ -54,6 +54,7 @@ const allRules = normalizeTopicRules(topicRuleData.rules)
 const calcTopic = ref('沉沦者的黑流树海')
 const pickedRelics = ref([])
 const relicStacks = ref({})
+const conditionalOn = ref([])
 const relicKeyword = ref('')
 
 const filtered = computed(() => {
@@ -114,6 +115,7 @@ const resolvedRules = computed(() =>
 
     relicKeys: pickedRelics.value,
     stacks: relicStacks.value,
+    enabledConditional: conditionalOn.value,
   }),
 )
 
@@ -172,10 +174,23 @@ function toggleRelic(key) {
     const next = { ...relicStacks.value }
     delete next[key]
     relicStacks.value = next
+    conditionalOn.value = conditionalOn.value.filter((item) => item !== key)
   } else {
     pickedRelics.value = [...pickedRelics.value, key]
     if (!relicStacks.value[key]) relicStacks.value = { ...relicStacks.value, [key]: 1 }
   }
+}
+
+function toggleConditional(key) {
+  conditionalOn.value = conditionalOn.value.includes(key)
+    ? conditionalOn.value.filter((item) => item !== key)
+    : [...conditionalOn.value, key]
+}
+
+function onTopicChange() {
+  pickedRelics.value = []
+  relicStacks.value = {}
+  conditionalOn.value = []
 }
 
 const talentList = computed(() => {
@@ -325,7 +340,7 @@ const displayAttr = (key) => {
       <details class="relic-config">
         <summary>藏品加成（已选 {{ pickedRelics.length }}）</summary>
         <div class="relic-controls">
-          <select v-model="calcTopic" @change="pickedRelics = []">
+          <select v-model="calcTopic" @change="onTopicChange">
             <option v-for="item in relicTopics" :key="item" :value="item">{{ item }}</option>
           </select>
 
@@ -348,9 +363,21 @@ const displayAttr = (key) => {
               :title="relic.stackUnit ? `每 ${relic.stackUnit} 资源 1 层` : '按当前触发次数填层数'"
             />
             <em>{{ relic.attributes.join(' / ') }}{{ relic.stacked ? '（层数）' : '' }}</em>
+            <button
+              v-if="relic.hasConditional && pickedRelics.includes(relic.key)"
+              class="cond-toggle"
+              :class="{ on: conditionalOn.includes(relic.key) }"
+              :title="relic.conditionText"
+              @click="toggleConditional(relic.key)"
+            >
+              {{ conditionalOn.includes(relic.key) ? '条件✓' : '条件' }}
+            </button>
           </label>
         </div>
         <p v-if="!filteredRelics.length" class="hint">该主题暂无可计算藏品</p>
+        <p v-if="conditionalOn.length" class="hint">
+          已启用 {{ conditionalOn.length }} 个条件效果，请确认触发场景（如登场 30 秒内、失衡状态）
+        </p>
       </details>
 
       <div class="seg full">
@@ -841,6 +868,25 @@ h3 {
   font-style: normal;
   font-size: 10px;
   color: var(--muted);
+}
+
+.cond-toggle {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 114, 182, 0.45);
+  background: transparent;
+  color: #f9a8d4;
+  font-size: 10px;
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.cond-toggle.on {
+  background: rgba(244, 114, 182, 0.25);
+  border-color: rgba(244, 114, 182, 0.8);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(244, 114, 182, 0.35);
 }
 
 .result-block {

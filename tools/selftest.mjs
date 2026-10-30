@@ -127,6 +127,17 @@ check('生命蓝图 条件减伤默认不生效', () => {
   return `default=${withRelic.finalDamage.toFixed(2)}`
 })
 
+check('条件开关显式启用后生效', () => {
+  const key = 'rogue_6_relic_final_10'
+  const off = resolveRules(normalized, { topic: '沉沦者的黑流树海', relicKeys: [key] })
+  const on = resolveRules(normalized, { topic: '沉沦者的黑流树海', relicKeys: [key], enabledConditional: [key] })
+  if (off.some((r) => r.attribute === 'damageReduction')) throw new Error('默认就含条件规则')
+  if (!on.some((r) => r.attribute === 'damageReduction')) throw new Error('显式启用后仍无条件规则')
+  const d1 = evaluateDamage({ attack: 1015, multiplier: 1.4, enemy: { def: 500, res: 0.2 }, allyRules: off, damageType: 'arts' })
+  const d2 = evaluateDamage({ attack: 1015, multiplier: 1.4, enemy: { def: 500, res: 0.2 }, allyRules: on, damageType: 'arts' })
+  return `${d1.finalDamage.toFixed(2)} → ${d2.finalDamage.toFixed(2)}`
+})
+
 check('敌方减伤接入 0.5 → 减半', () => {
   const rules = normalized.filter((r) => r.iconId === 'rogue_6_relic_final_10' && r.attribute === 'damageReduction')
   const base = evaluateDamage({ attack: 1015, multiplier: 1.4, enemy: { def: 500, res: 0.2 }, allyRules: [], damageType: 'arts' })

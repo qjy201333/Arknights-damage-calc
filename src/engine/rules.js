@@ -10,7 +10,6 @@ const DAMAGE_TYPE_MATCHERS = {
 export function usableRelics(rules, topic) {
   const map = new Map()
   for (const rule of rules) {
-    if (rule.conditional) continue
     if (topic && rule.topic !== topic) continue
     const key = rule.iconId ?? rule.relic
     if (!map.has(key)) {
@@ -22,9 +21,15 @@ export function usableRelics(rules, topic) {
         attributes: new Set(),
         stacked: false,
         stackUnit: rule.stackUnit ?? null,
+        hasConditional: false,
+        conditionText: null,
       })
     }
     if (rule.stacked) map.get(key).stacked = true
+    if (rule.conditional) {
+      map.get(key).hasConditional = true
+      if (!map.get(key).conditionText) map.get(key).conditionText = rule.conditionText ?? rule.raw
+    }
     map.get(key).attributes.add(rule.attribute)
   }
   return [...map.values()].map((item) => ({ ...item, attributes: [...item.attributes] }))
@@ -54,12 +59,16 @@ export function normalizeTopicRules(rules) {
   }))
 }
 
-export function resolveRules(rules, { topic, difficulty = 0, relicKeys = [], stacks = {} } = {}) {
+export function resolveRules(
+  rules,
+  { topic, difficulty = 0, relicKeys = [], stacks = {}, enabledConditional = [] } = {},
+) {
   const selected = new Set(relicKeys)
   if (selected.size === 0) return []
+  const conditionalOn = new Set(enabledConditional)
   const groups = new Map()
   for (const rule of rules) {
-    if (rule.conditional) continue
+    if (rule.conditional && !conditionalOn.has(rule.iconId ?? rule.relic)) continue
     if (topic && rule.topic !== topic) continue
     if (!selected.has(rule.iconId ?? rule.relic)) continue
     const key = `${rule.iconId ?? rule.relic}|${rule.attribute}|${rule.kind}|${rule.raw}`
