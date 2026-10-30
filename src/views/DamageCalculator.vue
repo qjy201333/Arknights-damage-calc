@@ -53,6 +53,7 @@ const damageType = ref('arts')
 const allRules = normalizeTopicRules(topicRuleData.rules)
 const calcTopic = ref('沉沦者的黑流树海')
 const pickedRelics = ref([])
+const relicStacks = ref({})
 const relicKeyword = ref('')
 
 const filtered = computed(() => {
@@ -112,6 +113,7 @@ const resolvedRules = computed(() =>
     topic: calcTopic.value,
 
     relicKeys: pickedRelics.value,
+    stacks: relicStacks.value,
   }),
 )
 
@@ -165,9 +167,15 @@ const cycleMetrics = computed(() =>
 )
 
 function toggleRelic(key) {
-  pickedRelics.value = pickedRelics.value.includes(key)
-    ? pickedRelics.value.filter((item) => item !== key)
-    : [...pickedRelics.value, key]
+  if (pickedRelics.value.includes(key)) {
+    pickedRelics.value = pickedRelics.value.filter((item) => item !== key)
+    const next = { ...relicStacks.value }
+    delete next[key]
+    relicStacks.value = next
+  } else {
+    pickedRelics.value = [...pickedRelics.value, key]
+    if (!relicStacks.value[key]) relicStacks.value = { ...relicStacks.value, [key]: 1 }
+  }
 }
 
 const talentList = computed(() => {
@@ -331,7 +339,15 @@ const displayAttr = (key) => {
               @change="toggleRelic(relic.key)"
             />
             <span>{{ relic.name }}</span>
-            <em>{{ relic.attributes.join(' / ') }}</em>
+            <input
+              v-if="relic.stacked && pickedRelics.includes(relic.key)"
+              v-model.number="relicStacks[relic.key]"
+              class="stack-input"
+              type="number"
+              :min="1"
+              :title="relic.stackUnit ? `每 ${relic.stackUnit} 资源 1 层` : '按当前触发次数填层数'"
+            />
+            <em>{{ relic.attributes.join(' / ') }}{{ relic.stacked ? '（层数）' : '' }}</em>
           </label>
         </div>
         <p v-if="!filteredRelics.length" class="hint">该主题暂无可计算藏品</p>
@@ -800,6 +816,18 @@ h3 {
 
 .relic-picker input {
   accent-color: #22d3ee;
+}
+
+.relic-picker .stack-input {
+  width: 52px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  background: rgba(8, 12, 20, 0.8);
+  font-size: 12px;
+  color: #67e8f9;
+  text-align: center;
+  outline: none;
 }
 
 .relic-picker span {

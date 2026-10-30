@@ -103,6 +103,7 @@ function buildRulesForRelic(topic, relic) {
     const mapping = BUFF_TARGET[buff.key]
     if (mapping) {
       const professions = selectorProfession(blackboard)
+      const stackUnit = blackboardValue(blackboard, 'stack_by_res_cnt')
       blackboard.forEach((entry, entryIndex) => {
         const attribute = ATTR_MAP[entry.key]
         if (!attribute) return
@@ -119,6 +120,7 @@ function buildRulesForRelic(topic, relic) {
           kind: mapping.kind,
           value: entry.value,
           stacked: Boolean(mapping.stacked),
+          stackUnit: typeof stackUnit === 'number' && stackUnit > 0 ? stackUnit : null,
           professionFilter: professions,
           source: 'excel',
           raw: `${buff.key} ${entry.key}=${entry.value}`,
@@ -148,7 +150,7 @@ function buildRulesForRelic(topic, relic) {
         damageType: DAMAGE_SCALE_TYPE[scaleMatch[1]] ?? null,
         kind: 'finalMul',
         value: round6(scale - 1),
-        stacked: buff.key !== 'global_buff_stack_base_one',
+        stacked: /^layer_char/.test(buff.key),
         source: 'excel',
         raw: `${keyValue} damage_scale=${scale}`,
       })
@@ -199,7 +201,7 @@ function buildRulesForRelic(topic, relic) {
         attribute: downAttr,
         kind: absoluteAttribute ? 'add' : 'mul',
         value: round6(value),
-        stacked: buff.key !== 'global_buff_stack_base_one',
+        stacked: /^layer_char/.test(buff.key),
         source: 'excel',
         raw: `${keyValue} ${downAttr}=${value}`,
       })

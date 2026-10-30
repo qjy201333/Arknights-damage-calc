@@ -14,8 +14,17 @@ export function usableRelics(rules, topic) {
     if (topic && rule.topic !== topic) continue
     const key = rule.iconId ?? rule.relic
     if (!map.has(key)) {
-      map.set(key, { key, name: rule.relic, iconId: rule.iconId, topic: rule.topic, attributes: new Set() })
+      map.set(key, {
+        key,
+        name: rule.relic,
+        iconId: rule.iconId,
+        topic: rule.topic,
+        attributes: new Set(),
+        stacked: false,
+        stackUnit: rule.stackUnit ?? null,
+      })
     }
+    if (rule.stacked) map.get(key).stacked = true
     map.get(key).attributes.add(rule.attribute)
   }
   return [...map.values()].map((item) => ({ ...item, attributes: [...item.attributes] }))
@@ -40,11 +49,12 @@ export function normalizeTopicRules(rules) {
     difficulty: null,
     professionFilter: rule.professionFilter ?? null,
     stacked: Boolean(rule.stacked),
+    stackUnit: rule.stackUnit ?? null,
     raw: rule.raw,
   }))
 }
 
-export function resolveRules(rules, { topic, difficulty = 0, relicKeys = [] } = {}) {
+export function resolveRules(rules, { topic, difficulty = 0, relicKeys = [], stacks = {} } = {}) {
   const selected = new Set(relicKeys)
   if (selected.size === 0) return []
   const groups = new Map()
@@ -61,7 +71,13 @@ export function resolveRules(rules, { topic, difficulty = 0, relicKeys = [] } = 
     const current = groups.get(key)
     if (!current || (current.difficulty ?? 0) < rule.difficulty) groups.set(key, rule)
   }
-  return [...groups.values()]
+  return [...groups.values()].map((rule) => {
+    if (!rule.stacked) return rule
+    const layers = Number(stacks[rule.iconId ?? rule.relic] ?? 1)
+    const safeLayers = Number.isFinite(layers) && layers >= 1 ? Math.floor(layers) : 1
+    if (safeLayers === 1) return rule
+    return { ...rule, value: round(rule.value * safeLayers), stackApplied: safeLayers }
+  })
 }
 
 export function groupAllyMods(rules) {

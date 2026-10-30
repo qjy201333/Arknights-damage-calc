@@ -134,6 +134,32 @@ check('敌方减伤接入 0.5 → 减半', () => {
   return `base=${base.finalDamage.toFixed(2)} → ${withReduction.finalDamage.toFixed(2)}`
 })
 
+check('层叠规则按层数放大（5 层 = 每层 × 5）', () => {
+  const stacked = normalized.find((r) => r.stacked && r.target === 'ally')
+  if (!stacked) throw new Error('无层叠规则')
+  const one = resolveRules(normalized, { topic: stacked.topic, relicKeys: [stacked.iconId] })
+  const five = resolveRules(normalized, { topic: stacked.topic, relicKeys: [stacked.iconId], stacks: { [stacked.iconId]: 5 } })
+  const r1 = one.find((r) => r.stacked)
+  const r5 = five.find((r) => r.stacked)
+  near(r5.value, r1.value * 5, 0.02)
+  return `${stacked.relic} ${r1.value} → ${r5.value}（${r5.stackApplied} 层）`
+})
+
+check('非层叠规则不受 stacks 参数影响', () => {
+  const normal = normalized.find((r) => !r.stacked && !r.conditional)
+  const one = resolveRules(normalized, { topic: normal.topic, relicKeys: [normal.iconId] })
+  const five = resolveRules(normalized, { topic: normal.topic, relicKeys: [normal.iconId], stacks: { [normal.iconId]: 5 } })
+  if (one[0].value !== five[0].value) throw new Error(`数值被错误放大 ${one[0].value} → ${five[0].value}`)
+  return `${normal.relic} 保持 ${one[0].value}`
+})
+
+check('一次性 buff 不再误标 stacked', () => {
+  const bad = normalized.filter((r) => r.stacked && ['开裂的束缚带', '奇渊面具', '复仇者'].includes(r.relic))
+  if (bad.length) throw new Error(`${bad.length} 条误标：${bad.map((r) => r.relic).join('，')}`)
+  const total = normalized.filter((r) => r.stacked).length
+  return `stacked 仅 ${total} 条（layer 类）`
+})
+
 // ---------- B. 数据完整性 ----------
 check('六星干员数量 147', () => {
   if (operators.length !== 147) throw new Error(`实际 ${operators.length}`)
