@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { computeOperatorPanel } from '../src/engine/operator.js'
 import { evaluateDamage, normalizeTopicRules, resolveRules } from '../src/engine/rules.js'
 import { computeManualDamage } from '../src/engine/manual.js'
+import { computeDpsMetrics } from '../src/engine/dps.js'
 
 const read = async (path) => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'))
 
@@ -60,6 +61,31 @@ check('自定义口径 17333.17', () => {
     atkScale: 4.1125, dmgScale: 1.606, def: 1875, defCut: 0.3, dmgReduction: 0.15,
   })
   return `damage=${near(Number(r.finalDamage.toFixed(2)), 17333.17)}`
+})
+
+check('DPS 基础：攻速100、间隔2.9 → 100', () => {
+  const m = computeDpsMetrics({ baseAttackTime: 2.9, attackSpeed: 100, damagePerHit: 290 })
+  near(m.interval, 2.9)
+  near(m.dps, 100)
+  return `interval=${m.interval} dps=${m.dps}`
+})
+
+check('DPS 攻速加成：攻速130 → 间隔缩短、DPS 提升', () => {
+  const base = computeDpsMetrics({ baseAttackTime: 2.9, attackSpeed: 100, damagePerHit: 290 })
+  const boosted = computeDpsMetrics({ baseAttackTime: 2.9, attackSpeed: 130, damagePerHit: 290 })
+  near(boosted.interval, 2.9 * 100 / 130)
+  near(boosted.dps, 290 / (2.9 * 100 / 130))
+  if (boosted.dps <= base.dps) throw new Error('攻速提升后 DPS 未增加')
+  return `interval=${boosted.interval.toFixed(3)} dps=${boosted.dps.toFixed(2)}`
+})
+
+check('DPS 与自定义伤害联动：17333.17 ÷ 2.9', () => {
+  const r = computeManualDamage({
+    base: 758, addRatio: 1.04, mulRatio: 0.6, finalAdd: 932.542,
+    atkScale: 4.1125, dmgScale: 1.606, def: 1875, defCut: 0.3, dmgReduction: 0.15,
+  })
+  const m = computeDpsMetrics({ baseAttackTime: 2.9, attackSpeed: 100, damagePerHit: r.finalDamage })
+  return `dps=${near(Number(m.dps.toFixed(2)), Number((17333.17 / 2.9).toFixed(2)), 0.02)}`
 })
 
 check('生命蓝图 条件减伤默认不生效', () => {

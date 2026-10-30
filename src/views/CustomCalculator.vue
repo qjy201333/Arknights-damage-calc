@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { computeManualDamage } from '../engine/manual.js'
+import { computeDpsMetrics } from '../engine/dps.js'
 
 const defaults = {
   base: 758,
@@ -15,10 +16,19 @@ const defaults = {
   enemyDefBonus: 0,
   enemyDefPct: 0,
   enemyReductionBonus: 0,
+  baseAttackTime: 2.9,
+  attackSpeed: 100,
 }
 
 const form = ref({ ...defaults })
 const result = computed(() => computeManualDamage(form.value))
+const dpsMetrics = computed(() =>
+  computeDpsMetrics({
+    baseAttackTime: form.value.baseAttackTime,
+    attackSpeed: form.value.attackSpeed,
+    damagePerHit: result.value.finalDamage,
+  }),
+)
 
 function reset() {
   form.value = { ...defaults }
@@ -57,6 +67,8 @@ const pct = (value) => `${round(value * 100)}%`
       <div class="grid">
         <label>攻击力倍率<input v-model.number="form.atkScale" type="number" step="0.0001" /></label>
         <label>伤害倍率（最终乘算）<input v-model.number="form.dmgScale" type="number" step="0.001" /></label>
+        <label>基础攻击间隔（秒）<input v-model.number="form.baseAttackTime" type="number" step="0.1" /></label>
+        <label>攻击速度<input v-model.number="form.attackSpeed" type="number" /></label>
       </div>
 
       <h3>敌人</h3>
@@ -93,6 +105,14 @@ const pct = (value) => `${round(value * 100)}%`
         <div class="result-row">
           <span>单次伤害</span>
           <b class="damage">{{ round(result.finalDamage) }}</b>
+        </div>
+        <div class="result-row">
+          <span>攻击间隔</span>
+          <b>{{ round(dpsMetrics.interval) }}s（攻速 {{ round(dpsMetrics.attackSpeed) }}）</b>
+        </div>
+        <div class="result-row">
+          <span>DPS（每秒伤害）</span>
+          <b class="damage">{{ round(dpsMetrics.dps) }}</b>
         </div>
         <div class="result-row">
           <span>最低保底</span>

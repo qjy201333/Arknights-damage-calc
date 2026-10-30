@@ -10,7 +10,15 @@ import {
   ATTR_LABEL,
 } from '../engine/operator.js'
 import topicRuleData from '../data/topicRules.json'
-import { usableRelics, ruleTopics, resolveRules, evaluateDamage, normalizeTopicRules } from '../engine/rules.js'
+import {
+  usableRelics,
+  ruleTopics,
+  resolveRules,
+  evaluateDamage,
+  normalizeTopicRules,
+  computedAllyAttributes,
+} from '../engine/rules.js'
+import { computeDpsMetrics } from '../engine/dps.js'
 
 const operators = operatorsData.operators
 const allSkills = skillsData.skills
@@ -116,6 +124,22 @@ const damageResult = computed(() =>
     damageType: damageType.value,
   }),
 )
+
+const speedMetrics = computed(() => {
+  if (!panel.value) return { interval: 0, dps: 0, attackSpeed: 100, baseAttackTime: 1, steps: [] }
+  const attrs = computedAllyAttributes(
+    {
+      attackSpeed: panel.value.attributes.attackSpeed ?? 100,
+      baseAttackTime: panel.value.attributes.baseAttackTime ?? 1,
+    },
+    resolvedRules.value,
+  )
+  return computeDpsMetrics({
+    baseAttackTime: attrs.attributes.baseAttackTime,
+    attackSpeed: attrs.attributes.attackSpeed,
+    damagePerHit: damageResult.value.finalDamage,
+  })
+})
 
 function toggleRelic(key) {
   pickedRelics.value = pickedRelics.value.includes(key)
@@ -325,6 +349,14 @@ const displayAttr = (key) => {
         <div class="result-row">
           <span>{{ damageType === 'physical' ? '物理伤害' : '法术伤害' }}</span>
           <b :class="damageType === 'physical' ? 'phys' : 'arts'">{{ round(damageResult.finalDamage) }}</b>
+        </div>
+        <div class="result-row">
+          <span>攻击速度 / 攻击间隔</span>
+          <b>{{ round(speedMetrics.attackSpeed) }} / {{ round(speedMetrics.interval) }}s</b>
+        </div>
+        <div class="result-row">
+          <span>DPS（每秒伤害）</span>
+          <b class="dps">{{ round(speedMetrics.dps) }}</b>
         </div>
       </div>
 
@@ -785,6 +817,11 @@ h3 {
 
 .result-row .phys {
   color: #f97316;
+}
+
+.result-row .dps {
+  color: #34d399;
+  text-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
 }
 
 .result-row .arts {
